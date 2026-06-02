@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
-dataset/genres_original/
-dataset/features_3.0_sec.json
-
 uploads/*
 !uploads/.gitkeep
 
