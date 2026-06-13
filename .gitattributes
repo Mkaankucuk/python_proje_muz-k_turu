@@ -1,0 +1,2 @@
+dataset/features_3.0_sec.json filter=lfs diff=lfs merge=lfs -text
+dataset/genres_original/**/*.wav filter=lfs diff=lfs merge=lfs -text
