@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Müzik Türü Sınıflandırma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Müzik Türü Sınıflandırma</h1>
+      <p>MFCC tabanlı eğitilmiş modeller ile ses analizi</p>
+    </div>
+    <div class="header-actions">
+      <span class="status"><span></span> Modeller hazır</span>
+      <button class="theme-toggle" type="button" aria-label="Koyu temaya geç" title="Tema değiştir">
+        <span class="theme-icon theme-icon-sun" aria-hidden="true">&#9728;</span>
+        <span class="theme-icon theme-icon-moon" aria-hidden="true">&#9790;</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <section class="workspace">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form action="{{ url_for('predict') }}" method="post" enctype="multipart/form-data">
+        <div class="section">
+          <div class="section-heading">
+            <span>01</span>
+            <div>
+              <h2>Model seçimi</h2>
+              <p>Analizde kullanılacak eğitilmiş modeli belirleyin.</p>
+            </div>
+          </div>
+
+          <div class="model-grid">
+            {% for key, model in models.items() %}
+              <label class="model-option">
+                <input type="radio" name="model_key" value="{{ key }}" {% if selected_model == key or (not selected_model and key == 'cnn_lstm') %}checked{% endif %}>
+                <span class="model-content">
+                  <strong>{{ model.label }}</strong>
+                  <small>{{ model.detail }}</small>
+                </span>
+                <span class="radio-dot"></span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-heading">
+            <span>02</span>
+            <div>
+              <h2>Ses kaynağı</h2>
+              <p>Dosya yükleyin veya YouTube bağlantısı girin.</p>
+            </div>
+          </div>
+
+          <div class="source-tabs">
+            <label>
+              <input type="radio" name="source_type" value="file" {% if selected_source != 'youtube' %}checked{% endif %}>
+              <span>Ses dosyası</span>
+            </label>
+            <label>
+              <input type="radio" name="source_type" value="youtube" {% if selected_source == 'youtube' %}checked{% endif %}>
+              <span>YouTube bağlantısı</span>
+            </label>
+          </div>
+
+          <div class="source-panel file-panel">
+            <label class="upload-area">
+              <input type="file" name="audio_file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac,.webm,audio/*">
+              <span class="upload-icon">↑</span>
+              <strong>Ses dosyasını seçin</strong>
+              <small>WAV, MP3, FLAC, OGG, M4A, AAC veya WEBM</small>
+            </label>
+          </div>
+
+          <div class="source-panel youtube-panel">
+            <label class="url-field">
+              <span>YouTube URL</span>
+              <input type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=...">
+            </label>
+          </div>
+
+          <button class="primary-button" type="submit">
+            <span>Analizi başlat</span>
+            <b>→</b>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="results">
+      <div class="results-header">
+        <h2>Analiz sonucu</h2>
+        {% if result %}<span>{{ result.model_label }}</span>{% endif %}
+      </div>
+
+      {% if result %}
+        <div class="prediction">
+          <small>Tahmin edilen tür</small>
+          <strong>{{ result.genre }}</strong>
+          <p>{{ "%.2f"|format(result.confidence) }}% güven oranı</p>
+        </div>
+
+        <dl class="result-meta">
+          <div><dt>Kaynak</dt><dd>{{ source_label }}</dd></div>
+          <div><dt>Segment</dt><dd>{{ result.segment_count }}</dd></div>
+        </dl>
+
+        <div class="probabilities">
+          <h3>Tür olasılıkları</h3>
+          {% for item in result.probabilities %}
+            <div class="probability-row">
+              <div><span>{{ item.genre }}</span><b>{{ "%.2f"|format(item.percent) }}%</b></div>
+              <div class="bar"><i style="width: {{ item.percent }}%"></i></div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <span>♪</span>
+          <p>Bir model ve ses kaynağı seçerek analizi başlatın.</p>
+        </div>
+      {% endif %}
+    </aside>
+  </main>
+
+  <script>
+    const themeToggle = document.querySelector('.theme-toggle');
+    const savedTheme = localStorage.getItem('music-classifier-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    function applyTheme(theme) {
+      const isDark = theme === 'dark';
+      document.documentElement.dataset.theme = theme;
+      themeToggle.setAttribute('aria-label', isDark ? 'Aydınlık temaya geç' : 'Koyu temaya geç');
+      localStorage.setItem('music-classifier-theme', theme);
+    }
+
+    applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+    themeToggle.addEventListener('click', () => {
+      applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    const sourceInputs = document.querySelectorAll('input[name="source_type"]');
+    const filePanel = document.querySelector('.file-panel');
+    const youtubePanel = document.querySelector('.youtube-panel');
+    function refreshSource() {
+      const selected = document.querySelector('input[name="source_type"]:checked').value;
+      filePanel.hidden = selected !== 'file';
+      youtubePanel.hidden = selected !== 'youtube';
+    }
+    sourceInputs.forEach((input) => input.addEventListener('change', refreshSource));
+    refreshSource();
+  </script>
+</body>
+</html>
