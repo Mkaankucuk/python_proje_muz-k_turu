@@ -86,7 +86,13 @@ git checkout bengisu-dev
 
 ## 1. Mobil Uygulamayı Çalıştırma
 
-Normal kullanım için Python tarafını çalıştırmana gerek yoktur. Hazır model dosyaları `assets/models/` klasöründe bulunur.
+Mobil uygulama tahmin yaparken doğrudan bu klasördeki modeli kullanır:
+
+```text
+assets/models/genre_classifier.tflite
+```
+
+Bu dosya, senin eğittiğin modelin mobil uygulamada çalışabilmesi için TensorFlow Lite formatına çevrilmiş halidir. Modeli değiştirmek istersen önce Python tarafındaki dönüştürme adımını çalıştırmalı, sonra mobil uygulamayı tekrar açmalısın.
 
 Flutter paketlerini indir:
 
@@ -153,34 +159,65 @@ Windows kullanıyorsan sanal ortamı şu şekilde aç:
 .venv\Scripts\activate
 ```
 
-## 3. Eğitilmiş Keras Modelini Mobil Uygulamaya Aktarma
+## 3. Benim Eğittiğim Modeli Mobil Uygulamaya Aktarma
 
-Elinde daha önce eğitilmiş `.keras` uzantılı model varsa onu mobil uygulamanın kullanacağı `.tflite` formatına çevirebilirsin.
+Mobil uygulama `.keras` modelini doğrudan okuyamaz. Bu yüzden senin eğittiğin modeli önce `.tflite` formatına çevirmek gerekir.
 
-Örnek:
+Elindeki eğitilmiş model dosyası örneğin şöyle olabilir:
+
+```text
+feature_engineered_densenet.keras
+```
+
+Bu dosyanın bilgisayardaki tam yolunu bul. Sonra proje klasöründeyken şu komutu çalıştır:
 
 ```bash
 python3 tools/convert_project_model_to_tflite.py \
   --model /MODELİN_BULUNDUĞU_YOL/feature_engineered_densenet.keras
 ```
 
-Bu komut şu dosyaları günceller:
+Örnek gerçek kullanım:
+
+```bash
+python3 tools/convert_project_model_to_tflite.py \
+  --model "/Users/kullanici/Desktop/feature_engineered_densenet.keras"
+```
+
+Bu komut senin eğittiğin modeli mobil uygulamanın okuyacağı dosyaya dönüştürür ve şunları günceller:
 
 ```text
 assets/models/genre_classifier.tflite
 assets/models/labels.json
 ```
 
-Sonra mobil uygulamayı tekrar çalıştır:
+Uygulama tür isimlerini `labels.json` dosyasından, model tahminini ise `genre_classifier.tflite` dosyasından okur.
+
+Dönüştürmeden sonra kontrol et:
+
+```bash
+ls assets/models
+```
+
+Şu dosyaları görmelisin:
+
+```text
+genre_classifier.tflite
+labels.json
+feature_engineering_normalization.json
+```
+
+Sonra mobil uygulamayı tekrar başlat:
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-## 4. Modeli GTZAN Datasetiyle Yeniden Eğitme
+Bu adımdan sonra uygulamada dosya seçtiğinde tahminler senin eğittiğin model üzerinden yapılır.
 
-Eğer modeli sıfırdan eğitmek istersen GTZAN veri seti şu yapıda olmalıdır:
+## 4. Modeli Yeniden Eğitmek İstersen
+
+Eğer mevcut model yerine yeni bir model eğitmek istersen GTZAN veri seti şu yapıda olmalıdır:
 
 ```text
 genres_original/
@@ -213,7 +250,7 @@ python3 tools/train_gtzan_model.py \
   --epochs 150
 ```
 
-Eğitim tamamlanınca model dosyaları otomatik olarak `assets/models/` klasörüne yazılır. Sonrasında mobil uygulama yeni modeli kullanır.
+Eğitim tamamlanınca yeni model dosyaları otomatik olarak `assets/models/` klasörüne yazılır. Sonrasında mobil uygulama yeni eğitilen modeli kullanır.
 
 ## 5. Uygulamayı Test Etme
 
