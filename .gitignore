@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -143,6 +143,17 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Flutter / Dart local outputs
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+*.iml
 
 # Spyder project settings
 .spyderproject
